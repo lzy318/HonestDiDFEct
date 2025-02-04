@@ -48,7 +48,7 @@
 
   # Remove the period corresponding with t=0
   if (dropZero) {
-    A = A[, -(numPrePeriods+1)]
+    A = A[, -c(numPrePeriods+1)]
     base::return(A)
   } else {
     base::return(A)
@@ -158,13 +158,13 @@
   # Construct identified sets for (+) at each value of s
   min_s = -(numPrePeriods - 1)
   id_bounds_plus = purrr::map_dfr(
-    .x = min_s:0,
+    .x = min_s:(-1),
     .f = ~.compute_IDset_DeltaRM_fixedS(s = .x, Mbar = Mbar, max_positive = TRUE,
                                         trueBeta = trueBeta, l_vec = l_vec,
                                         numPrePeriods = numPrePeriods, numPostPeriods = numPostPeriods)
   )
   id_bounds_minus = purrr::map_dfr(
-    .x = min_s:0,
+    .x = min_s:(-1),
     .f = ~.compute_IDset_DeltaRM_fixedS(s = .x, Mbar = Mbar, max_positive = FALSE,
                                         trueBeta = trueBeta, l_vec = l_vec,
                                         numPrePeriods = numPrePeriods, numPostPeriods = numPostPeriods)
@@ -274,7 +274,8 @@ computeConditionalCS_DeltaRM <- function(betahat, sigma, numPrePeriods, numPostP
 
   # Create minimal s index for looping.
   min_s = -(numPrePeriods - 1)
-  s_indices = min_s:0
+  s_indices = min_s:(-1)
+  #print(s_indices)
 
   # If grid.ub, grid.lb is not specified, we set these bounds to be equal to the id set under parallel trends
   # {0} +- 20*sdTheta (i.e. [-20*sdTheta, 20*sdTheta].
