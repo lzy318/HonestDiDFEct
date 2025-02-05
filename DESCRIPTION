@@ -1,4 +1,4 @@
-Package: HonestDiD_FEct
+Package: HonestDiDFEct
 Type: Package
 Title: Robust Inference in Difference-in-Differences and Event Study Designs
 Version: 0.2.6
