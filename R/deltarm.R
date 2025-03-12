@@ -22,13 +22,13 @@
   # First construct matrix Atilde that takes first diffrences -- (numPrePeriods+numPostPeriods) x (numPrePeriods+numPostPeriods+1)
   # Note Atilde is just the positive moments; is not related to Atilde, the rotate matrix, in the paper
   # Note: Atilde initially includes t = 0. We then drop it.
-  Atilde = base::matrix(0, nrow = numPrePeriods+numPostPeriods, ncol = numPrePeriods+numPostPeriods+1)
-  for (r in 1:(numPrePeriods+numPostPeriods)) {
+  Atilde = base::matrix(0, nrow = numPrePeriods+numPostPeriods-1, ncol = numPrePeriods+numPostPeriods)
+  for (r in 1:(numPrePeriods+numPostPeriods-1)) {
     Atilde[r, r:(r+1)] = c(-1, 1)
   }
 
   # Create a vector to extract the max first dif, which corresponds with the first dif for period s, or minus this if max_positive == FALSE
-  v_max_dif <- base::matrix(0, nrow = 1, ncol = numPrePeriods + numPostPeriods + 1)
+  v_max_dif <- base::matrix(0, nrow = 1, ncol = numPrePeriods + numPostPeriods)
   v_max_dif[(numPrePeriods+s):(numPrePeriods+1+s)] <- c(-1,1)
 
   if (max_positive == FALSE){
@@ -36,26 +36,28 @@
   }
 
   # The bounds for the first dif starting with period t are 1*v_max_dif if t<=0 and M*v_max_dif if t>0
-  A_UB <- base::rbind( pracma::repmat(v_max_dif, n=numPrePeriods, m = 1),
+  A_UB <- base::rbind( pracma::repmat(v_max_dif, n=numPrePeriods-1, m = 1),
                        pracma::repmat(Mbar*v_max_dif, n=numPostPeriods, m = 1))
-
+  #print(dim(Atilde))
+  #print(dim(A_UB))
   # Construct A that imposes |Atilde * delta | <= A_UB * delta
   A = base::rbind(Atilde - A_UB, -Atilde - A_UB)
-
   # Remove all-zero rows of the matrix Atilde, corresponding with the constraint (delta_s - delta_s-1) - (delta_s - delta_s-1) <= (delta_s - delta_s-1) - (delta_s - delta_s-1)
   zerorows <- base::apply(X = A, MARGIN = 1, FUN = function(x) t(x) %*% x) <= 10^-10
   A <- A[!zerorows, ]
 
+  #print(A)
+
   # Remove the period corresponding with t=0
   if (dropZero) {
-    A = A[, -c(numPrePeriods+1)]
+    #A = A[, -(numPrePeriods+1)]
     base::return(A)
   } else {
     base::return(A)
   }
 }
 
-.create_d_RM <- function(numPrePeriods, numPostPeriods, dropZero = TRUE){
+.create_d_RM <- function(numPrePeriods, Mbar,s, numPostPeriods, dropZero = TRUE){
   # This function creates a vector for the linear constraints that
   # delta is in Delta^RM_{s,(.)}(Mbar), where (.) is + if max_positve = TRUE and - if max_positive = FALSE.
   # It implements this using the general characterization of d, NOT the sharp
@@ -66,7 +68,7 @@
   #   numPostPeriods = number of post-periods. This is an element of resultsObjects.
 
   A_RM = .create_A_RM(numPrePeriods = numPrePeriods, numPostPeriods = numPostPeriods,
-                      Mbar = 0, s = 0, dropZero = dropZero) # d doesn't depend on Mbar or s; we just use this to get the dims right
+                      Mbar = Mbar, s = s, dropZero = dropZero) # d doesn't depend on Mbar or s; we just use this to get the dims right
   d = base::rep(0, base::NROW(A_RM))
   base::return(d)
 }
@@ -85,7 +87,7 @@
   # Create A_RM, d_RM for this choice of s, max_positive
   A_RM_s = .create_A_RM(numPrePeriods = numPrePeriods, numPostPeriods = numPostPeriods,
                        Mbar = Mbar, s = s, max_positive = max_positive)
-  d_RM = .create_d_RM(numPrePeriods = numPrePeriods, numPostPeriods = numPostPeriods)
+  d_RM = .create_d_RM(numPrePeriods = numPrePeriods,Mbar = Mbar, s = s, numPostPeriods = numPostPeriods)
 
   # Create vector for direction of inequalities associated with RM
   dir_RM = base::rep("<=", base::length(d_RM))
@@ -104,13 +106,13 @@
                                          val = base::rep(Inf, numPrePeriods+numPostPeriods)))
 
   # Create and solve for max
+  #print(A_RM_s)
   results.max = Rglpk::Rglpk_solve_LP(obj = fDelta,
                                       max = TRUE,
                                       mat = A_RM_s,
                                       dir = dir_RM,
                                       rhs = d_RM,
                                       bounds = bounds)
-
   # Create and solve for min
   results.min = Rglpk::Rglpk_solve_LP(obj = fDelta,
                                       max = FALSE,
@@ -118,7 +120,6 @@
                                       dir = dir_RM,
                                       rhs = d_RM,
                                       bounds = bounds)
-
   if (results.max$status != 0 & results.min$status != 0) {
     # If the solver does not return solution, we just return the l_vec'trueBeta.
     id.ub = (base::t(l_vec) %*% trueBeta[(numPrePeriods+1):(numPrePeriods+numPostPeriods)])
@@ -158,13 +159,13 @@
   # Construct identified sets for (+) at each value of s
   min_s = -(numPrePeriods - 1)
   id_bounds_plus = purrr::map_dfr(
-    .x = min_s:(-1),
+    .x = min_s:-1,
     .f = ~.compute_IDset_DeltaRM_fixedS(s = .x, Mbar = Mbar, max_positive = TRUE,
                                         trueBeta = trueBeta, l_vec = l_vec,
                                         numPrePeriods = numPrePeriods, numPostPeriods = numPostPeriods)
   )
   id_bounds_minus = purrr::map_dfr(
-    .x = min_s:(-1),
+    .x = min_s:-1,
     .f = ~.compute_IDset_DeltaRM_fixedS(s = .x, Mbar = Mbar, max_positive = FALSE,
                                         trueBeta = trueBeta, l_vec = l_vec,
                                         numPrePeriods = numPrePeriods, numPostPeriods = numPostPeriods)
@@ -200,8 +201,10 @@
   # Create matrix A_RM_s, and vector d_RM
   A_RM_s = .create_A_RM(numPrePeriods = numPrePeriods, numPostPeriods = numPostPeriods,
                        Mbar = Mbar, s = s, max_positive = max_positive)
-  d_RM = .create_d_RM(numPrePeriods = numPrePeriods, numPostPeriods = numPostPeriods)
-
+  d_RM = .create_d_RM(numPrePeriods = numPrePeriods,Mbar = Mbar, s = s, numPostPeriods = numPostPeriods)
+  #print('dddd')
+  #print(dim(A_RM_s))
+  #print(length(d_RM))
   # If only use post period moments, construct indices for the post period moments only.
   if (postPeriodMomentsOnly){
     if(numPostPeriods > 1){
@@ -274,8 +277,7 @@ computeConditionalCS_DeltaRM <- function(betahat, sigma, numPrePeriods, numPostP
 
   # Create minimal s index for looping.
   min_s = -(numPrePeriods - 1)
-  s_indices = min_s:(-1)
-  #print(s_indices)
+  s_indices = min_s:-1
 
   # If grid.ub, grid.lb is not specified, we set these bounds to be equal to the id set under parallel trends
   # {0} +- 20*sdTheta (i.e. [-20*sdTheta, 20*sdTheta].
@@ -288,6 +290,7 @@ computeConditionalCS_DeltaRM <- function(betahat, sigma, numPrePeriods, numPostP
   CIs_RM_minus_allS = base::matrix(0, nrow = gridPoints, ncol = base::length(s_indices))
   for (s_i in 1:base::length(s_indices)) {
     # Compute CI for s, (+) and bind it to all CI's for (+)
+    #print(s_indices[s_i])
     CI_s_plus = .computeConditionalCS_DeltaRM_fixedS(s = s_indices[s_i], max_positive = TRUE, Mbar = Mbar,
                                                      betahat = betahat, sigma = sigma, numPrePeriods = numPrePeriods,
                                                      numPostPeriods = numPostPeriods, l_vec = l_vec,
