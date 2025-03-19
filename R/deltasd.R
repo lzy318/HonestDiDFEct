@@ -30,7 +30,7 @@
     Atilde[r, r:(r+2)] = base::c(1, -2, 1)
   }
   #Atilde = Atilde[, -(numPrePeriods+1)]
-  print('yes')
+  #print('yes')
   # If postPeriodMomentsOnly == TRUE, exclude moments that only involve pre-periods
   if(postPeriodMomentsOnly){
     postPeriodIndices <- (numPrePeriods +1):base::NCOL(Atilde)
