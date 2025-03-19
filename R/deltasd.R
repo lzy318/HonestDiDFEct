@@ -25,12 +25,12 @@
   # First construct matrix Atilde -- (numPrePeriods+numPostPeriods-2) x (numPrePeriods+numPostPeriods+1)
   # Note Atilde is just the positive moments; is not related to Atilde, the rotate matrix, in the paper
   # Note: Atilde initially includes t = 0. We then drop it.
-  Atilde = base::matrix(0, nrow = numPrePeriods+numPostPeriods-1, ncol = numPrePeriods+numPostPeriods+1)
-  for (r in 1:(numPrePeriods+numPostPeriods-1)) {
+  Atilde = base::matrix(0, nrow = numPrePeriods+numPostPeriods-2, ncol = numPrePeriods+numPostPeriods)
+  for (r in 1:(numPrePeriods+numPostPeriods-2)) {
     Atilde[r, r:(r+2)] = base::c(1, -2, 1)
   }
-  Atilde = Atilde[, -(numPrePeriods+1)]
-
+  #Atilde = Atilde[, -(numPrePeriods+1)]
+  print('yes')
   # If postPeriodMomentsOnly == TRUE, exclude moments that only involve pre-periods
   if(postPeriodMomentsOnly){
     postPeriodIndices <- (numPrePeriods +1):base::NCOL(Atilde)
