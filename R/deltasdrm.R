@@ -22,21 +22,21 @@
   # First construct matrix Atilde used in DeltaSD -- (numPrePeriods+numPostPeriods-1) x (numPrePeriods+numPostPeriods+1)
   # Note Atilde is just the positive moments; is not related to Atilde, the rotate matrix, in the paper
   # Note: Atilde initially includes t = 0. We then drop it.
-  Atilde = base::matrix(0, nrow = numPrePeriods+numPostPeriods-1, ncol = numPrePeriods+numPostPeriods+1)
+  Atilde = base::matrix(0, nrow = numPrePeriods+numPostPeriods-2, ncol = numPrePeriods+numPostPeriods)
   for (r in 1:(numPrePeriods+numPostPeriods-1)) {
     Atilde[r, r:(r+2)] = c(1, -2, 1)
   }
 
   # Create a vector to extract the max second dif, which corresponds with the second dif for period s, or minus this if max_positive == FALSE
-  v_max_dif <- base::matrix(0, nrow = 1, ncol = numPrePeriods + numPostPeriods + 1)
-  v_max_dif[(numPrePeriods+1+s-2):(numPrePeriods+1+s)] <- base::c(1,-2, 1)
+  v_max_dif <- base::matrix(0, nrow = 1, ncol = numPrePeriods + numPostPeriods)
+  v_max_dif[(numPrePeriods+s-2):(numPrePeriods+s)] <- base::c(1,-2, 1)
 
   if (max_positive == FALSE) {
     v_max_dif <- -v_max_dif
   }
 
   # The bounds for the 2nd dif starting with period t are 1*v_max_dif if t<=0 and M*v_max_dif if t>0
-  A_UB <- base::rbind( pracma::repmat(v_max_dif, n=numPrePeriods-1, m = 1),
+  A_UB <- base::rbind( pracma::repmat(v_max_dif, n=numPrePeriods-2, m = 1),
                        pracma::repmat(Mbar*v_max_dif, n=numPostPeriods, m = 1))
 
   # Construct A that imposes |Atilde * delta | <= A_UB * delta
@@ -47,7 +47,7 @@
   A <- A[!zerorows, ]
   # Remove the period corresponding with t=0
   if (dropZero) {
-    A = A[, -(numPrePeriods+1)]
+    #A = A[, -(numPrePeriods+1)]
     base::return(A)
   } else {
     base::return(A)
@@ -154,13 +154,13 @@
   # Construct identified sets for (+) at each value of s
   min_s = -(numPrePeriods - 2)
   id_bounds_plus = purrr::map_dfr(
-    .x = min_s:0,
+    .x = min_s:-1,
     .f = ~.compute_IDset_DeltaSDRM_fixedS(s = .x, Mbar = Mbar, max_positive = TRUE,
                                           trueBeta = trueBeta, l_vec = l_vec,
                                           numPrePeriods = numPrePeriods, numPostPeriods = numPostPeriods)
   )
   id_bounds_minus = purrr::map_dfr(
-    .x = min_s:0,
+    .x = min_s:-1,
     .f = ~.compute_IDset_DeltaSDRM_fixedS(s = .x, Mbar = Mbar, max_positive = FALSE,
                                           trueBeta = trueBeta, l_vec = l_vec,
                                           numPrePeriods = numPrePeriods, numPostPeriods = numPostPeriods)
@@ -279,7 +279,7 @@ computeConditionalCS_DeltaSDRM <- function(betahat, sigma, numPrePeriods, numPos
 
   # Create minimal s index for looping.
   min_s = -(numPrePeriods - 2)
-  s_indices = min_s:0
+  s_indices = min_s:-1
 
   # Construct theta grid by computing id set under parallel trends.
   # The default sets the grid to be equal to [-20*sdTheta, 20*sdTheta]
