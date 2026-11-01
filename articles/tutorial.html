@@ -205,6 +205,41 @@ the numbers, and <code>restrict = "sm"</code> gives the same plot for
 the smoothness restriction.</p>
 </div>
 <div class="section level2">
+<h2 id="fit-an-interactive-fixed-effects-model">Fit an interactive fixed effects model<a class="anchor" aria-label="anchor" href="#fit-an-interactive-fixed-effects-model"></a>
+</h2>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">turnout</span><span class="op">)</span></span>
+<span><span class="va">out.ife</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fect/man/fect.html" class="external-link">fect</a></span><span class="op">(</span><span class="va">turnout</span> <span class="op">~</span> <span class="va">policy_edr</span>, data <span class="op">=</span> <span class="va">turnout</span>, index <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"abb"</span>, <span class="st">"year"</span><span class="op">)</span>,</span>
+<span>                method <span class="op">=</span> <span class="st">"ife"</span>, r <span class="op">=</span> <span class="fl">2</span>, CV <span class="op">=</span> <span class="cn">FALSE</span>, se <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>                placeboTest <span class="op">=</span> <span class="cn">TRUE</span>, placebo.period <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">-</span><span class="fl">2</span>, <span class="fl">0</span><span class="op">)</span>,</span>
+<span>                parallel <span class="op">=</span> <span class="cn">FALSE</span>, seed <span class="op">=</span> <span class="fl">1234</span><span class="op">)</span></span>
+<span><span class="va">out.ife</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/fect/man/fect_sens.html" class="external-link">fect_sens</a></span><span class="op">(</span><span class="va">out.ife</span>, post.periods <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">4</span>,</span>
+<span>                     Mbarvec <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span>, periodMbarvec <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span><span class="op">)</span>,</span>
+<span>                     Mvec <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.1</span>, <span class="fl">0.2</span><span class="op">)</span>, periodMvec <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">out.ife</span><span class="op">$</span><span class="va">sensitivity.rm</span><span class="op">$</span><span class="va">original</span><span class="op">)</span></span>
+<span><span class="co">#&gt;       lb   ub   method Delta</span></span>
+<span><span class="co">#&gt; 1 -0.423 10.9 Original    NA</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="va">out.ife</span><span class="op">$</span><span class="va">sensitivity.rm</span><span class="op">$</span><span class="va">results</span><span class="op">)</span></span>
+<span><span class="co">#&gt;        lb    ub method   Delta Mbar</span></span>
+<span><span class="co">#&gt; 1  0.0883  7.32   C-LF DeltaRM  0.0</span></span>
+<span><span class="co">#&gt; 2 -0.7320  9.26   C-LF DeltaRM  0.5</span></span>
+<span><span class="co">#&gt; 3 -2.9690 12.09   C-LF DeltaRM  1.0</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">out.ife</span>, type <span class="op">=</span> <span class="st">"sens"</span>, restrict <span class="op">=</span> <span class="st">"rm"</span>,</span>
+<span>     main <span class="op">=</span> <span class="st">"Relative magnitudes, interactive fixed effects"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="tutorial_files/figure-html/ife-average-1.png" class="r-plt" alt="" width="770"></p>
+<p>The sensitivity analysis applies to more flexible outcome models.
+Only the <code><a href="https://rdrr.io/pkg/fect/man/fect.html" class="external-link">fect()</a></code> call changes, and <code><a href="https://rdrr.io/pkg/fect/man/fect_sens.html" class="external-link">fect_sens()</a></code>
+and the plot work as before. <code>method = "ife", r = 2</code> adds two
+latent factors to the two-way fixed effects, and <code>CV = FALSE</code>
+fixes that number instead of choosing it by cross-validation.</p>
+<p>This example uses <code>turnout</code> from <strong>fect</strong>, on
+election-day registration and voter turnout in US states (Xu 2017). On
+<code>hh2019</code> the fit does not converge within the default
+<code>max.iteration</code>, and the estimates change with that
+limit.</p>
+</div>
+<div class="section level2">
 <h2 id="use-your-own-fect-run">Use your own fect run<a class="anchor" aria-label="anchor" href="#use-your-own-fect-run"></a>
 </h2>
 <p><code><a href="https://rdrr.io/pkg/fect/man/fect_sens.html" class="external-link">fect_sens()</a></code> needs a <code><a href="https://rdrr.io/pkg/fect/man/fect.html" class="external-link">fect()</a></code> run with
@@ -239,6 +274,9 @@ arXiv:2509.01829.</p>
 <p>Rambachan, Ashesh, and Jonathan Roth (2023). <a href="https://doi.org/10.1093/restud/rdad018" class="external-link">A More Credible Approach
 to Parallel Trends</a>. <em>Review of Economic Studies</em> 90 (5):
 2555-2591.</p>
+<p>Xu, Yiqing (2017). Generalized Synthetic Control Method: Causal
+Inference with Interactive Fixed Effects Models. <em>Political
+Analysis</em> 25 (1): 57-76.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

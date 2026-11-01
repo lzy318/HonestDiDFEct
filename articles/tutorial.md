@@ -156,6 +156,46 @@ at the bottom show the number of treated units.
 `out$sensitivity.rm$periods` holds the numbers, and `restrict = "sm"`
 gives the same plot for the smoothness restriction.
 
+## Fit an interactive fixed effects model
+
+``` r
+data(turnout)
+out.ife <- fect(turnout ~ policy_edr, data = turnout, index = c("abb", "year"),
+                method = "ife", r = 2, CV = FALSE, se = TRUE,
+                placeboTest = TRUE, placebo.period = c(-2, 0),
+                parallel = FALSE, seed = 1234)
+out.ife <- fect_sens(out.ife, post.periods = 1:4,
+                     Mbarvec = c(0, 0.5, 1), periodMbarvec = c(0, 0.5),
+                     Mvec = c(0, 0.1, 0.2), periodMvec = c(0, 0.1))
+```
+
+``` r
+as.data.frame(out.ife$sensitivity.rm$original)
+#>       lb   ub   method Delta
+#> 1 -0.423 10.9 Original    NA
+as.data.frame(out.ife$sensitivity.rm$results)
+#>        lb    ub method   Delta Mbar
+#> 1  0.0883  7.32   C-LF DeltaRM  0.0
+#> 2 -0.7320  9.26   C-LF DeltaRM  0.5
+#> 3 -2.9690 12.09   C-LF DeltaRM  1.0
+plot(out.ife, type = "sens", restrict = "rm",
+     main = "Relative magnitudes, interactive fixed effects")
+```
+
+![](tutorial_files/figure-html/ife-average-1.png)
+
+The sensitivity analysis applies to more flexible outcome models. Only
+the [`fect()`](https://rdrr.io/pkg/fect/man/fect.html) call changes, and
+[`fect_sens()`](https://rdrr.io/pkg/fect/man/fect_sens.html) and the
+plot work as before. `method = "ife", r = 2` adds two latent factors to
+the two-way fixed effects, and `CV = FALSE` fixes that number instead of
+choosing it by cross-validation.
+
+This example uses `turnout` from **fect**, on election-day registration
+and voter turnout in US states (Xu 2017). On `hh2019` the fit does not
+converge within the default `max.iteration`, and the estimates change
+with that limit.
+
 ## Use your own fect run
 
 [`fect_sens()`](https://rdrr.io/pkg/fect/man/fect_sens.html) needs a
@@ -196,3 +236,7 @@ HonestDiD](https://arxiv.org/abs/2509.01829). arXiv:2509.01829.
 Rambachan, Ashesh, and Jonathan Roth (2023). [A More Credible Approach
 to Parallel Trends](https://doi.org/10.1093/restud/rdad018). *Review of
 Economic Studies* 90 (5): 2555-2591.
+
+Xu, Yiqing (2017). Generalized Synthetic Control Method: Causal
+Inference with Interactive Fixed Effects Models. *Political Analysis* 25
+(1): 57-76.
