@@ -25,12 +25,12 @@
   # First construct matrix Atilde -- (numPrePeriods+numPostPeriods-2) x (numPrePeriods+numPostPeriods+1)
   # Note Atilde is just the positive moments; is not related to Atilde, the rotate matrix, in the paper
   # Note: Atilde initially includes t = 0. We then drop it.
-  Atilde = base::matrix(0, nrow = numPrePeriods+numPostPeriods-2, ncol = numPrePeriods+numPostPeriods)
-  for (r in 1:(numPrePeriods+numPostPeriods-2)) {
+  Atilde = base::matrix(0, nrow = numPrePeriods+numPostPeriods-1, ncol = numPrePeriods+numPostPeriods+1)
+  for (r in 1:(numPrePeriods+numPostPeriods-1)) {
     Atilde[r, r:(r+2)] = base::c(1, -2, 1)
   }
-  #Atilde = Atilde[, -(numPrePeriods+1)]
-  #print('yes')
+  Atilde = Atilde[, -(numPrePeriods+1)]
+
   # If postPeriodMomentsOnly == TRUE, exclude moments that only involve pre-periods
   if(postPeriodMomentsOnly){
     postPeriodIndices <- (numPrePeriods +1):base::NCOL(Atilde)
@@ -251,7 +251,7 @@ computeConditionalCS_DeltaSD <- function(betahat, sigma, numPrePeriods, numPostP
       obj <- CVXR::Minimize( base::t(flci$optimalVec) %*% flci$optimalVec -
                          2 * base::t(flci$optimalVec) %*% base::t(A_SD) %*% vbar + CVXR::quad_form(x = vbar, P = A_SD %*% base::t(A_SD)) )
       prob = CVXR::Problem(obj)
-      result = CVXR::psolve(prob)
+      result = .psolve(prob)
       hybrid_list$vbar = result$getValue(vbar)
 
       # Add objects to hybrid_list: flci half-length
