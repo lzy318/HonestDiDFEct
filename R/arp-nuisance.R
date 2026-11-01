@@ -613,6 +613,15 @@
     v_B = base::t( base::t(e1) %*% base::solve(base::cbind(sdVec_B, X_TB)) %*% S_B )
     sigma2_B = base::t(v_B) %*% sigma_ARP %*% v_B
     sigma_B = base::sqrt(sigma2_B)
+    # sigma2_B is the variance of eta, which has no units, so the tolerance does not scale with sigma_ARP.
+    if (as.numeric(sigma2_B) <= 1e-8) {
+      return(list(
+        reject = as.numeric(linSoln$eta_star > 0),
+        eta    = linSoln$eta_star,
+        delta  = linSoln$delta_star,
+        lambda = linSoln$lambda
+      ))
+    }
     rho = Gamma_B %*% sigma_ARP %*% v_B %*% base::solve(sigma2_B)
     maximand_or_minimand = (-Gamma_B %*% y_T_ARP)/rho + base::c(base::t(v_B) %*% y_T_ARP)
 
@@ -720,7 +729,7 @@
   #   testResultsGrid
 
   # Construct grid of theta values to test over.
-  thetaGrid <- base::seq(grid.lb, grid.ub, length.out = gridPoints)
+  thetaGrid <- base::seq(c(grid.lb), c(grid.ub), length.out = gridPoints)
 
   # Construct matrix Gamma and A*(Gamma)^{-1}
   Gamma = .construct_Gamma(l_vec)

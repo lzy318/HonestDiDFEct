@@ -1,7 +1,11 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 README
-deltaSD.png
 ^LICENSE\.md$
 .github
 ^CRAN-SUBMISSION$
+^Architecture\.md$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^vignettes$

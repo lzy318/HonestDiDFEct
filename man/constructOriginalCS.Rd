@@ -2,10 +2,10 @@
 \alias{constructOriginalCS}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-  Constructs original confidence interval for parameter of interest, theta = l_vec'tau.
+  Original confidence interval for the target
 }
 \description{
-  Constructs original confidence interval for parameter of interest, theta = l_vec'tau using the user-specified estimated event study coefficients and variance-covariance matrix.
+  Constructs the usual confidence interval for l_vec'beta_post from the post-treatment coefficients as given, with no differencing. \code{fect_sens()} stores this interval as the original one. The robust confidence sets are built after subtracting the coefficient at s = 0 from every coefficient, but this interval is not. If \code{l_vec} sums to one, its center and the center of the robust confidence set at Mbar = 0 differ by the coefficient at s = 0.
 }
 \usage{
 constructOriginalCS(betahat, sigma,
@@ -16,45 +16,45 @@ constructOriginalCS(betahat, sigma,
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{betahat}{
-  Vector of estimated event study coefficients.
+  Vector of coefficients for consecutive placebo periods ending at s = 0, then for the post-treatment periods 1, 2, ..., with no reference period.
   }
   \item{sigma}{
-  Covariance matrix of event study coefficients.
+  Covariance matrix of \code{betahat}.
   }
   \item{numPrePeriods}{
-  Number of pre-periods.
+  Number of placebo periods, counting s = 0.
   }
   \item{numPostPeriods}{
-  Number of post-periods.
+  Number of post-treatment periods.
   }
   \item{l_vec}{
-  Vector of length numPostPeriods that describes the scalar parameter of interest, theta = l_vec'tau. Default equals to first basis vector, (1, 0, ..., 0)
+  Vector of length \code{numPostPeriods} that defines the target, l_vec'beta_post. Default equals the first basis vector, (1, 0, ..., 0).
   }
   \item{alpha}{
-  Desired size of the robust confidence sets. Default equals 0.05 (corresponding to 95\% confidence interval)
+  Desired size of the confidence interval. Default equals 0.05, which gives a 95\% confidence interval.
   }
 }
 \value{
-Returns a dataframe with columns
+Returns a data frame with columns
   \item{lb}{
-  Lower bound of original confidence set (based on asymptotic normality).
+  Lower bound of the original confidence interval, based on asymptotic normality.
   }
   \item{ub}{
-  Upper bound of original confidence set (based on asymptotic normality).
+  Upper bound of the original confidence interval, based on asymptotic normality.
   }
   \item{method}{
-  Method for constructing confidence set; set to "Original".
+  Set to \code{"Original"}.
   }
   \item{Delta}{
-  The set Delta that was specified; set to NA.
+  Set to \code{NA}.
   }
 }
 \examples{
-  # Simple use case; for more detailed examples,
-  # see <https://github.com/asheshrambachan/HonestDiD#honestdid>
-  constructOriginalCS(betahat        = BCdata_EventStudy$betahat,
-                      sigma          = BCdata_EventStudy$sigma,
-                      numPrePeriods  = length(BCdata_EventStudy$prePeriodIndices),
-                      numPostPeriods = length(BCdata_EventStudy$postPeriodIndices),
-                      alpha          = 0.05)
+  # Placebo periods -2, -1 and 0, then post periods 1 to 4. fect_sens() makes this
+  # call for you on a fect() run with placeboTest = TRUE.
+  betahat <- c("-2" = 0.02, "-1" = -0.01, "0" = 0.01,
+               "1" = 0.08, "2" = 0.10, "3" = 0.09, "4" = 0.12)
+  sigma   <- 0.0004 * 0.5^abs(outer(1:7, 1:7, "-")) + 0.0001
+  constructOriginalCS(betahat, sigma, numPrePeriods = 3, numPostPeriods = 4,
+                      l_vec = rep(0.25, 4))
 }

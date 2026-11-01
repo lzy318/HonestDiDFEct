@@ -20,6 +20,9 @@ createSensitivityResults <- function(betahat, sigma,
                                      parallel = FALSE,
                                      seed = 0) {
 
+  entry <- .fectEntry(betahat, sigma, numPrePeriods, numPostPeriods, l_vec)
+  betahat <- entry$betahat; sigma <- entry$sigma; numPrePeriods <- entry$numPrePeriods
+
   .CustomErrorHandling({
   .stopIfNotConformable(betahat, sigma, numPrePeriods, numPostPeriods, l_vec)
   .warnIfNotSymmPSD(sigma)
@@ -377,7 +380,7 @@ createSensitivityResults <- function(betahat, sigma,
       base::stop("Method must equal one of: FLCI, Conditional, C-F or C-LF")
     }
   }
-  base::return(Results)
+  base::return(.fectAddShift(Results, entry$shift))
   }, "Error in computing main results")
 }
 
@@ -423,6 +426,10 @@ createSensitivityResults_relativeMagnitudes <- function(betahat, sigma,
                                                         grid.lb = NA,
                                                         parallel = FALSE,
                                                         seed = 0) {
+
+  entry <- .fectEntry(betahat, sigma, numPrePeriods, numPostPeriods, l_vec)
+  betahat <- entry$betahat; sigma <- entry$sigma; numPrePeriods <- entry$numPrePeriods
+  grid.ub <- grid.ub - entry$shift; grid.lb <- grid.lb - entry$shift
 
   .CustomErrorHandling({
   .stopIfNotConformable(betahat, sigma, numPrePeriods, numPostPeriods, l_vec)
@@ -684,7 +691,7 @@ createSensitivityResults_relativeMagnitudes <- function(betahat, sigma,
     }
   }
   # Return tibble of results
-  base::return(Results)
+  base::return(.fectAddShift(Results, entry$shift))
   }, "Error in computing main results")
 }
 

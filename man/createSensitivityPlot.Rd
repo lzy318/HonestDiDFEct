@@ -2,10 +2,10 @@
 \alias{createSensitivityPlot}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Constructs sensitivity plot for \eqn{\Delta = \Delta^{SD}(M)}, \eqn{\Delta^{SDB}(M)} and \eqn{\Delta^{SDM}(M)}
+Sensitivity plot under the smoothness restriction
 }
 \description{
-  This function constructs sensitivity plots that examine how the robust confidence sets change as the parameter M varies for \eqn{\Delta = \Delta^{SD}(M)}, \eqn{\Delta^{SDB}(M)} and \eqn{\Delta^{SDM}(M)}. Similar plots are constructed in Section 6 of Rambachan & Roth (2021).
+  Plots how the robust confidence sets change with M under \eqn{\Delta^{SD}(M)}, \eqn{\Delta^{SDB}(M)} or \eqn{\Delta^{SDM}(M)}, next to the original confidence interval. For \pkg{fect} output, \code{plot(type = "sens", restrict = "sm")} in the \pkg{fect} package draws a similar figure.
 }
 \usage{
 createSensitivityPlot(robustResults, originalResults,
@@ -14,46 +14,43 @@ createSensitivityPlot(robustResults, originalResults,
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{robustResults}{
-  Dataframe that contains the upper/lower bounds of robust confidence sets for each choice of M. Contains columns: method --  Method of constructing robust confidence set (e.g., "FLCI"), lb -- Lower bound of robust confidence set, ub -- Upper bound of robust confidence set, M -- M values associated with each robust confidence set.
+  Data frame of robust confidence sets from \code{createSensitivityResults()}, with columns \code{method}, \code{lb}, \code{ub} and \code{M}.
   }
   \item{originalResults}{
-  Dataframe that contains the original confidence set for the parameter of interest. Contains columns: method --  Method of constructing confidence set (e.g., "Original"), lb -- Lower bound of confidence set, ub -- Upper bound of confidence set.
+  Data frame with the original confidence interval from \code{constructOriginalCS()}, with columns \code{method}, \code{lb} and \code{ub}.
   }
   \item{rescaleFactor}{
-  Scalar that is used to rescale the user specified choices of M and the upper/lower bounds of the confidence sets. Default equals one.
+  Scalar that rescales the M values and the bounds of the confidence sets. Default equals one.
   }
   \item{maxM}{
-  Scalar that specifies the maximum M value to plot in the sensitivity plot. Default equals infinity (no truncation).
+  Largest M value to plot. Default equals infinity, which plots all values.
   }
   \item{add_xAxis}{
-  Logical specifying whether to plot the x-axis in the sensitivity plot. Default equals TRUE.
+  Logical that specifies whether to draw a horizontal line at zero. Default equals \code{TRUE}.
   }
 }
 \value{
-Returns ggplot object of the sensitivity plot.
+Returns a ggplot object.
 }
 \references{
-  Rambachan, Ashesh and Jonathan Roth. "An Honest Approach to Parallel Trends." 2021.
+  Rambachan, Ashesh, and Jonathan Roth (2023). A More Credible Approach to Parallel Trends. \emph{Review of Economic Studies} 90 (5): 2555-2591. \doi{10.1093/restud/rdad018}
 }
 \author{
   Ashesh Rambachan
 }
 \examples{
 \donttest{
-  # Simple use case; for more detailed examples,
-  # see <https://github.com/asheshrambachan/HonestDiD#honestdid>
+  # Placebo periods -2, -1 and 0, then post periods 1 to 4. fect_sens() makes this
+  # call for you on a fect() run with placeboTest = TRUE.
+  betahat <- c("-2" = 0.02, "-1" = -0.01, "0" = 0.01,
+               "1" = 0.08, "2" = 0.10, "3" = 0.09, "4" = 0.12)
+  sigma   <- 0.0004 * 0.5^abs(outer(1:7, 1:7, "-")) + 0.0001
   robustResults <-
-    createSensitivityResults(betahat        = BCdata_EventStudy$betahat,
-                             sigma          = BCdata_EventStudy$sigma,
-                             numPrePeriods  = length(BCdata_EventStudy$prePeriodIndices),
-                             numPostPeriods = length(BCdata_EventStudy$postPeriodIndices),
-                             alpha          = 0.05)
+    createSensitivityResults(betahat, sigma, numPrePeriods = 3, numPostPeriods = 4,
+                             method = "C-LF", Mvec = c(0, 0.02), l_vec = rep(0.25, 4))
   originalResults <-
-    constructOriginalCS(betahat        = BCdata_EventStudy$betahat,
-                        sigma          = BCdata_EventStudy$sigma,
-                        numPrePeriods  = length(BCdata_EventStudy$prePeriodIndices),
-                        numPostPeriods = length(BCdata_EventStudy$postPeriodIndices),
-                        alpha          = 0.05)
+    constructOriginalCS(betahat, sigma, numPrePeriods = 3, numPostPeriods = 4,
+                        l_vec = rep(0.25, 4))
   createSensitivityPlot(robustResults, originalResults)
 }
 }

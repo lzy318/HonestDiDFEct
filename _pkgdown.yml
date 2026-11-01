@@ -1,0 +1,29 @@
+url: https://lzy318.github.io/HonestDiDFEct/
+
+template:
+  bootstrap: 5
+
+reference:
+  - title: Sensitivity analysis
+    contents:
+      - createSensitivityResults
+      - createSensitivityResults_relativeMagnitudes
+      - constructOriginalCS
+  - title: Plots
+    contents:
+      - createSensitivityPlot
+      - createSensitivityPlot_relativeMagnitudes
+      - createEventStudyPlot
+  - title: Utilities
+    contents:
+      - basisVector
+  - title: Data
+    contents:
+      - BCdata_EventStudy
+      - LWdata_EventStudy
+
+articles:
+  - title: Tutorial
+    navbar: ~
+    contents:
+      - articles/tutorial
