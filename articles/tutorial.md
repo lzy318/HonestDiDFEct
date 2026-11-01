@@ -1,0 +1,198 @@
+# Sensitivity analysis with fect and HonestDiDFEct
+
+A placebo test in **fect** holds out the last pre-treatment periods and
+estimates effects there, where there should be no effect.
+[`fect_sens()`](https://rdrr.io/pkg/fect/man/fect_sens.html) uses these
+placebo coefficients as a benchmark for how far parallel trends could
+fail after treatment. It reports a robust confidence set for the
+treatment effect at each degree of failure you allow.
+[`fect_sens()`](https://rdrr.io/pkg/fect/man/fect_sens.html) calls
+**HonestDiDFEct** for the computation. You need both packages.
+
+``` r
+install.packages("fect")
+# install.packages("remotes")
+remotes::install_github("lzy318/HonestDiDFEct")
+```
+
+## Fit fect with placebo periods
+
+The example is Hainmueller and Hangartner (2019), who study the effect
+of indirect versus direct democracy on naturalization rates in Swiss
+municipalities. The data come with **fect** as `hh2019`. The outcome
+`nat_rate_ord` is the naturalization rate, and effects are in percentage
+points.
+
+``` r
+library(fect)
+data(hh2019)
+out <- fect(nat_rate_ord ~ indirect, data = hh2019, index = c("bfs", "year"),
+            method = "fe", se = TRUE,
+            placeboTest = TRUE, placebo.period = c(-2, 0),
+            parallel = FALSE, seed = 1234)
+```
+
+In **fect**, s = 1 is the first treated period and s = 0 is the last
+untreated one. `placebo.period = c(-2, 0)` holds out s = -2, -1 and 0.
+**fect** imputes the untreated outcome in these periods in the same way
+as after treatment.
+
+``` r
+round(out$est.att[as.character(-2:6), c("ATT", "S.E.", "count")], 3)
+#>       ATT  S.E. count
+#> -2 -0.047 0.262   503
+#> -1  0.183 0.264   503
+#> 0   0.254 0.276   503
+#> 1   0.923 0.272   503
+#> 2   1.929 0.353   414
+#> 3   2.149 0.438   346
+#> 4   1.384 0.346   341
+#> 5   1.478 0.451   153
+#> 6   3.063 0.683   132
+round(diff(out$est.att[as.character(-2:0), "ATT"]), 3)
+#>    -1     0 
+#> 0.230 0.071
+```
+
+The first three rows are the placebo coefficients, and the last line
+gives the changes between them. The number of treated units in `count`
+drops after s = 4. This tutorial uses s = 1 to 4.
+
+## Run the sensitivity analysis
+
+``` r
+out <- fect_sens(out, post.periods = 1:4,
+                 Mbarvec = c(0, 0.5, 1), periodMbarvec = c(0, 0.5),
+                 Mvec = c(0, 0.1, 0.2), periodMvec = c(0, 0.1))
+```
+
+[`fect_sens()`](https://rdrr.io/pkg/fect/man/fect_sens.html) applies two
+restrictions to the violation, the bias that the failure of parallel
+trends adds to the estimate at each s. The relative-magnitudes
+restriction (RM) bounds each change in the violation after s = 0 by
+`Mbar` times the largest change between consecutive placebo periods.
+That largest change is 0.23 here, from s = -2 to s = -1. The smoothness
+restriction (SD) bounds the change in the slope of the violation from
+one period to the next by `M`, in percentage points. The `Delta` column
+below shows them as `DeltaRM` and `DeltaSD`.
+
+Always pass `post.periods`, because its default fails. It must start at
+1 and have no gaps. `Mbarvec` and `Mvec` hold the values of `Mbar` and
+`M` for the average effect, and `periodMbarvec` and `periodMvec` hold
+the values for each period. Do not set a period vector to `NULL`,
+because that also drops the results for the average effect. The fit and
+this call take a few minutes. Each value and each post-treatment period
+adds run time.
+
+## Read the average effect
+
+``` r
+as.data.frame(out$sensitivity.rm$original)
+#>     lb   ub   method Delta
+#> 1 1.13 1.96 Original    NA
+as.data.frame(out$sensitivity.rm$results)
+#>       lb   ub method   Delta Mbar
+#> 1  0.727 1.86   C-LF DeltaRM  0.0
+#> 2  0.192 2.39   C-LF DeltaRM  0.5
+#> 3 -0.553 3.23   C-LF DeltaRM  1.0
+plot(out, type = "sens", restrict = "rm", main = "Relative magnitudes")
+```
+
+![](tutorial_files/figure-html/average-1.png)
+
+`out$sensitivity.rm` holds the RM results, and `out$sensitivity.smooth`
+holds the SD results. The target is the average effect over s = 1 to 4,
+weighted by the number of treated units. `C-LF` in the `method` column
+is the conditional least-favorable hybrid, which
+[`fect_sens()`](https://rdrr.io/pkg/fect/man/fect_sens.html) uses for
+both restrictions.
+
+The Original interval is the usual confidence interval, on the
+coefficients as **fect** reports them. For the robust confidence sets,
+[`fect_sens()`](https://rdrr.io/pkg/fect/man/fect_sens.html) first
+subtracts the coefficient at s = 0, 0.254 here, from every coefficient.
+At `Mbar = 0` the violation stays at its level at s = 0. The center of
+the robust confidence set then lies 0.254 below the center of the
+Original interval.
+
+Zero is outside the robust confidence set at `Mbar = 0.5` and inside it
+at `Mbar = 1`. So the estimate stays significantly positive if each
+change in the violation after treatment is at most half of the largest
+placebo change. It does not if a change can be as large as that placebo
+change.
+
+``` r
+as.data.frame(out$sensitivity.smooth$results)
+#>       lb   ub method   Delta   M
+#> 1 -0.855 3.11   C-LF DeltaSD 0.0
+#> 2 -1.210 3.47   C-LF DeltaSD 0.1
+#> 3 -1.578 3.84   C-LF DeltaSD 0.2
+plot(out, type = "sens", restrict = "sm", main = "Smoothness")
+```
+
+![](tutorial_files/figure-html/smooth-1.png)
+
+At `M = 0` the robust confidence set is wide and includes zero. The
+violation then continues in a straight line, with the slope it has
+between s = -1 and s = 0. Extending that slope adds the sampling error
+of the placebo coefficients to the estimate.
+
+## Read the effect in each period
+
+``` r
+plot(out, type = "sens_es", restrict = "rm", main = "Relative magnitudes",
+     xlim = c(-5, 6), ylim = c(-2, 5))
+```
+
+![](tutorial_files/figure-html/event-study-1.png)
+
+The dots and thin lines are the coefficients and confidence intervals
+from **fect**, with the placebo periods in orange. The colored bars are
+the robust confidence sets for each period, with the same 0.254
+subtracted. At `Mbar = 0` each bar is centered 0.254 below its dot, and
+at `Mbar = 0.5` about as far. At `Mbar = 0.5` the bars for s = 2 and 3
+lie above zero, and the bars for s = 1 and 4 include zero. The gray bars
+at the bottom show the number of treated units.
+`out$sensitivity.rm$periods` holds the numbers, and `restrict = "sm"`
+gives the same plot for the smoothness restriction.
+
+## Use your own fect run
+
+[`fect_sens()`](https://rdrr.io/pkg/fect/man/fect_sens.html) needs a
+[`fect()`](https://rdrr.io/pkg/fect/man/fect.html) run with
+`placeboTest = TRUE` and `se = TRUE`. The placebo periods must be
+consecutive and end at s = 0, and you need at least two of them.
+Covariates, unbalanced panels, and estimators such as `method = "ife"`
+and `method = "gsynth"` work as long as placebo periods are used. A run
+with `loo = TRUE` does not work, and the package stops with a message.
+
+To use another confidence-set method, or to add a sign or monotonicity
+restriction, call
+[`createSensitivityResults()`](https://lzy318.github.io/HonestDiDFEct/reference/createSensitivityResults.md)
+or
+[`createSensitivityResults_relativeMagnitudes()`](https://lzy318.github.io/HonestDiDFEct/reference/createSensitivityResults_relativeMagnitudes.md)
+yourself.
+
+Rambachan and Roth (2023) define the restrictions, and Chiu et
+al. (2026) adapt them to the estimators in **fect**. For a cohort-level
+analysis under staggered adoption, see
+[CohortHonestDiD](https://github.com/lzy318/CohortHonestDiD) and Liu
+(2026).
+
+## References
+
+Chiu, Albert, Xingchen Lan, Ziyi Liu, and Yiqing Xu. (2026). [Causal
+Panel Analysis Under Parallel Trends: Lessons from a Large Reanalysis
+Study](https://www.cambridge.org/core/journals/american-political-science-review/article/causal-panel-analysis-under-parallel-trends-lessons-from-a-large-reanalysis-study/219275E0CE901F099F2CFFBA07079243).
+*American Political Science Review*, 120(1): 245–266.
+
+Hainmueller, Jens, and Dominik Hangartner (2019). Does Direct Democracy
+Hurt Immigrant Minorities? Evidence from Naturalization Decisions in
+Switzerland. *American Journal of Political Science* 63 (3): 530-547.
+
+Liu, Ziyi (2026). [Cohort-Anchored
+HonestDiD](https://arxiv.org/abs/2509.01829). arXiv:2509.01829.
+
+Rambachan, Ashesh, and Jonathan Roth (2023). [A More Credible Approach
+to Parallel Trends](https://doi.org/10.1093/restud/rdad018). *Review of
+Economic Studies* 90 (5): 2555-2591.
