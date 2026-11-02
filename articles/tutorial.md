@@ -156,45 +156,61 @@ at the bottom show the number of treated units.
 `out$sensitivity.rm$periods` holds the numbers, and `restrict = "sm"`
 gives the same plot for the smoothness restriction.
 
-## Fit an interactive fixed effects model
+## Fit interactive fixed effects models
 
 ``` r
 data(turnout)
-out.ife <- fect(turnout ~ policy_edr, data = turnout, index = c("abb", "year"),
-                method = "ife", r = 2, CV = FALSE, se = TRUE,
-                placeboTest = TRUE, placebo.period = c(-2, 0),
-                parallel = FALSE, seed = 1234)
-out.ife <- fect_sens(out.ife, post.periods = 1:4,
-                     Mbarvec = c(0, 0.5, 1), periodMbarvec = c(0, 0.5),
-                     Mvec = c(0, 0.1, 0.2), periodMvec = c(0, 0.1))
+fit_turnout <- function(method) {
+  out <- fect(turnout ~ policy_edr, data = turnout, index = c("abb", "year"),
+              method = method, r = 2, CV = FALSE, se = TRUE,
+              placeboTest = TRUE, placebo.period = c(-2, 0),
+              parallel = FALSE, seed = 1234)
+  fect_sens(out, post.periods = 1:4,
+            Mbarvec = c(0, 0.5, 1), periodMbarvec = c(0, 0.5),
+            Mvec = c(0, 0.1, 0.2), periodMvec = c(0, 0.1))
+}
+out.ife <- fit_turnout("ife")
+out.gsynth <- fit_turnout("gsynth")
 ```
 
 ``` r
-as.data.frame(out.ife$sensitivity.rm$original)
-#>       lb   ub   method Delta
-#> 1 -0.423 10.9 Original    NA
-as.data.frame(out.ife$sensitivity.rm$results)
-#>        lb    ub method   Delta Mbar
-#> 1  0.0883  7.32   C-LF DeltaRM  0.0
-#> 2 -0.7320  9.26   C-LF DeltaRM  0.5
-#> 3 -2.9690 12.09   C-LF DeltaRM  1.0
-plot(out.ife, type = "sens", restrict = "rm",
-     main = "Relative magnitudes, interactive fixed effects")
+rm_sets <- function(out) {
+  res <- out$sensitivity.rm
+  data.frame(lb = c(res$original$lb, res$results$lb),
+             ub = c(res$original$ub, res$results$ub))
+}
+data.frame(set = c("Original", paste("Mbar =", c(0, 0.5, 1))),
+           ife = rm_sets(out.ife), gsynth = rm_sets(out.gsynth))
+#>          set  ife.lb ife.ub gsynth.lb gsynth.ub
+#> 1   Original -0.4227  10.86    -0.536      9.76
+#> 2   Mbar = 0  0.0883   7.32     0.047      6.75
+#> 3 Mbar = 0.5 -0.7320   9.26    -0.644      8.40
+#> 4   Mbar = 1 -2.9690  12.09    -2.716     10.82
 ```
 
-![](tutorial_files/figure-html/ife-average-1.png)
+``` r
+same_axis <- ggplot2::coord_cartesian(ylim = c(-5, 15))
+plot(out.ife, type = "sens", restrict = "rm", main = "IFE") + same_axis
+plot(out.gsynth, type = "sens", restrict = "rm", main = "Gsynth") + same_axis
+```
+
+![](tutorial_files/figure-html/factor-models-plot-1.png)![](tutorial_files/figure-html/factor-models-plot-2.png)
 
 The sensitivity analysis applies to more flexible outcome models. Only
 the [`fect()`](https://rdrr.io/pkg/fect/man/fect.html) call changes, and
-[`fect_sens()`](https://rdrr.io/pkg/fect/man/fect_sens.html) and the
-plot work as before. `method = "ife", r = 2` adds two latent factors to
-the two-way fixed effects, and `CV = FALSE` fixes that number instead of
-choosing it by cross-validation.
+[`fect_sens()`](https://rdrr.io/pkg/fect/man/fect_sens.html) and
+[`plot()`](https://rdrr.io/r/graphics/plot.default.html) work as before.
+Both models add two latent factors to the two-way fixed effects.
+`method = "ife", r = 2` estimates them from all units’ untreated
+periods, and `method = "gsynth", r = 2` from the never-treated units
+only. `CV = FALSE` fixes the number of factors instead of choosing it by
+cross-validation.
 
 This example uses `turnout` from **fect**, on election-day registration
-and voter turnout in US states (Xu 2017). On `hh2019` the fit does not
-converge within the default `max.iteration`, and the estimates change
-with that limit.
+and voter turnout in US states (Xu 2017). Here the robust confidence set
+at `Mbar = 0` is narrower than the Original interval in both models,
+because subtracting the coefficient at s = 0 cancels estimation error
+shared with the post-treatment coefficients.
 
 ## Use your own fect run
 
