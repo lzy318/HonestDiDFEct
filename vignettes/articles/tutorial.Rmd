@@ -125,34 +125,51 @@ each bar is centered 0.254 below its dot, and at `Mbar = 0.5` about as far. At
 `out$sensitivity.rm$periods` holds the numbers, and `restrict = "sm"` gives the
 same plot for the smoothness restriction.
 
-## Fit an interactive fixed effects model
+## Fit interactive fixed effects models
 
-```{r ife, message=FALSE, warning=FALSE, results="hide"}
+```{r factor-models, message=FALSE, warning=FALSE, results="hide"}
 data(turnout)
-out.ife <- fect(turnout ~ policy_edr, data = turnout, index = c("abb", "year"),
-                method = "ife", r = 2, CV = FALSE, se = TRUE,
-                placeboTest = TRUE, placebo.period = c(-2, 0),
-                parallel = FALSE, seed = 1234)
-out.ife <- fect_sens(out.ife, post.periods = 1:4,
-                     Mbarvec = c(0, 0.5, 1), periodMbarvec = c(0, 0.5),
-                     Mvec = c(0, 0.1, 0.2), periodMvec = c(0, 0.1))
+fit_turnout <- function(method) {
+  out <- fect(turnout ~ policy_edr, data = turnout, index = c("abb", "year"),
+              method = method, r = 2, CV = FALSE, se = TRUE,
+              placeboTest = TRUE, placebo.period = c(-2, 0),
+              parallel = FALSE, seed = 1234)
+  fect_sens(out, post.periods = 1:4,
+            Mbarvec = c(0, 0.5, 1), periodMbarvec = c(0, 0.5),
+            Mvec = c(0, 0.1, 0.2), periodMvec = c(0, 0.1))
+}
+out.ife <- fit_turnout("ife")
+out.gsynth <- fit_turnout("gsynth")
 ```
 
-```{r ife-average}
-as.data.frame(out.ife$sensitivity.rm$original)
-as.data.frame(out.ife$sensitivity.rm$results)
-plot(out.ife, type = "sens", restrict = "rm",
-     main = "Relative magnitudes, interactive fixed effects")
+```{r factor-models-table}
+rm_sets <- function(out) {
+  res <- out$sensitivity.rm
+  data.frame(lb = c(res$original$lb, res$results$lb),
+             ub = c(res$original$ub, res$results$ub))
+}
+data.frame(set = c("Original", paste("Mbar =", c(0, 0.5, 1))),
+           ife = rm_sets(out.ife), gsynth = rm_sets(out.gsynth))
+```
+
+```{r factor-models-plot, fig.width=4, fig.height=3.5, fig.show="hold", out.width="50%"}
+same_axis <- ggplot2::coord_cartesian(ylim = c(-5, 15))
+plot(out.ife, type = "sens", restrict = "rm", main = "IFE") + same_axis
+plot(out.gsynth, type = "sens", restrict = "rm", main = "Gsynth") + same_axis
 ```
 
 The sensitivity analysis applies to more flexible outcome models. Only the
-`fect()` call changes, and `fect_sens()` and the plot work as before.
-`method = "ife", r = 2` adds two latent factors to the two-way fixed effects, and
-`CV = FALSE` fixes that number instead of choosing it by cross-validation.
+`fect()` call changes, and `fect_sens()` and `plot()` work as before. Both models
+add two latent factors to the two-way fixed effects. `method = "ife", r = 2`
+estimates them from all units' untreated periods, and `method = "gsynth", r = 2`
+from the never-treated units only. `CV = FALSE` fixes the number of factors
+instead of choosing it by cross-validation.
 
 This example uses `turnout` from **fect**, on election-day registration and voter
-turnout in US states (Xu 2017). On `hh2019` the fit does not converge within the
-default `max.iteration`, and the estimates change with that limit.
+turnout in US states (Xu 2017). Here the robust confidence set at `Mbar = 0` is
+narrower than the Original interval in both models, because subtracting the
+coefficient at s = 0 cancels estimation error shared with the post-treatment
+coefficients.
 
 ## Use your own fect run
 
